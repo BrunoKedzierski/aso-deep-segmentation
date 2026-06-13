@@ -34,11 +34,14 @@ class WaterSegmentationModel(pl.LightningModule):
         self.loss_fn = smp.losses.DiceLoss(smp.losses.BINARY_MODE, from_logits=True)
         self.lr = lr
 
+        self.trainable_backbone_layers = trainable_backbone_layers
+
+
         for param in self.model.encoder.parameters():
             param.requires_grad = False
 
         if trainable_backbone_layers > 0:
-            for layer in list(self.model.encoder.children())[-2:]:
+            for layer in list(self.model.encoder.children())[-self.trainable_backbone_layers:]:
                 for param in layer.parameters():
                     param.requires_grad = True
 

@@ -16,7 +16,7 @@ def main():
     wandb.login()
     batch_size = 16
     img_size = 640
-
+    run_name = "base"
     train_dataset = WaterBinaryDataset(PROCESSED_ROOT, "train", img_size)
     valid_dataset = WaterBinaryDataset(PROCESSED_ROOT, "val", img_size)
     test_dataset  = WaterBinaryDataset(PROCESSED_ROOT, "test", img_size)
@@ -54,10 +54,31 @@ def main():
         in_channels=3,
         out_classes=1,
         t_max=t_max,
-        trainable_backbone_layers=2,
+        trainable_backbone_layers=8,
         lr=2e-4,
     )
 
+
+    model = WaterSegmentationModel(
+        "Unet",
+        "resnet34",
+        encoder_weights="imagenet",
+        in_channels=3,
+        out_classes=1,
+        t_max=t_max,
+        trainable_backbone_layers=2,
+        lr=2e-4,
+    )
+    model = WaterSegmentationModel(
+        "Unet",
+        "resnet34",
+        encoder_weights="imagenet",
+        in_channels=3,
+        out_classes=1,
+        t_max=t_max,
+        trainable_backbone_layers=0,
+        lr=2e-4,
+    )
     summary(
         model,
         input_size=(batch_size, 3, img_size, img_size),
@@ -66,7 +87,7 @@ def main():
 
     wandb_logger = WandbLogger(
         project="water-segmentation",
-        name="unet-resnet34-freeze2",
+        name=run_name,
         log_model=False,
     )
 
@@ -85,7 +106,7 @@ def main():
         monitor="valid_dataset_iou",
         mode="max",
         save_top_k=1,
-        filename="best-{epoch:02d}-{valid_dataset_iou:.4f}",
+        filename=f"best-{{epoch:02d}}-{{valid_dataset_iou:.4f}}-{run_name}",
     )
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
