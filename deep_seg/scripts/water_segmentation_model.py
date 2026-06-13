@@ -80,13 +80,34 @@ class WaterSegmentationModel(pl.LightningModule):
         fn = torch.cat([x["fn"] for x in outputs])
         tn = torch.cat([x["tn"] for x in outputs])
 
-        per_image_iou = smp.metrics.iou_score(tp, fp, fn, tn, reduction="micro-imagewise")
-        dataset_iou = smp.metrics.iou_score(tp, fp, fn, tn, reduction="micro")
+        # IoU (you already had this)
+        per_image_iou = smp.metrics.iou_score(
+            tp, fp, fn, tn, reduction="micro-imagewise"
+        )
+        dataset_iou = smp.metrics.iou_score(
+            tp, fp, fn, tn, reduction="micro"
+        )
 
-        self.log_dict({
-            f"{stage}_per_image_iou": per_image_iou,
-            f"{stage}_dataset_iou": dataset_iou,
-        }, prog_bar=True)
+        # Precision, recall, F1 (global / micro)
+        tp_sum = tp.sum().float()
+        fp_sum = fp.sum().float()
+        fn_sum = fn.sum().float()
+        eps = 1e-7
+
+        precision = tp_sum / (tp_sum + fp_sum + eps)
+        recall = tp_sum / (tp_sum + fn_sum + eps)
+        f1 = 2 * precision * recall / (precision + recall + eps)
+
+        self.log_dict(
+            {
+                f"{stage}_per_image_iou": per_image_iou,
+                f"{stage}_dataset_iou": dataset_iou,
+                f"{stage}_precision": precision,
+                f"{stage}_recall": recall,
+                f"{stage}_f1": f1,
+            },
+            prog_bar=True,
+        )
 
     def training_step(self, batch, batch_idx):
         out = self.shared_step(batch, "train")
